@@ -70,7 +70,7 @@ export default function Cart() {
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2">
               <img
-                src="/favicon.svg"
+                src={`${import.meta.env.BASE_URL}favicon.svg`}
                 alt="Store"
                 className="h-10 w-10 rounded-xl shadow-lg shadow-primary/25 object-contain"
               />

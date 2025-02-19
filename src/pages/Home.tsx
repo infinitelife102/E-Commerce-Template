@@ -62,7 +62,7 @@ export default function Home() {
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2 group">
               <img
-                src="/favicon.svg"
+                src={`${import.meta.env.BASE_URL}favicon.svg`}
                 alt="Store"
                 className="h-10 w-10 rounded-xl shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow object-contain"
               />
@@ -273,7 +273,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <img src="/favicon.svg" alt="Store" className="h-9 w-9 rounded-xl object-contain" />
+                <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="Store" className="h-9 w-9 rounded-xl object-contain" />
                 <span className="text-lg font-bold text-white">Store</span>
               </div>
               <p className="text-sm text-slate-400 leading-relaxed">

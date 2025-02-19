@@ -65,6 +65,9 @@ export default function ProductDetail() {
   function handleImageMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const el = imageContainerRef.current;
     if (!el) return;
+    if (!zoomVisible) {
+      setZoomVisible(true);
+    }
     const rect = el.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -110,7 +113,7 @@ export default function ProductDetail() {
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-2">
               <img
-                src="/favicon.svg"
+                src={`${import.meta.env.BASE_URL}favicon.svg`}
                 alt="Store"
                 className="h-10 w-10 rounded-xl shadow-lg shadow-primary/25 object-contain"
               />

@@ -1,11 +1,11 @@
 -- Supabase E-Commerce Database Schema
--- 이 SQL을 Supabase SQL Editor에서 실행하여 데이터베이스를 설정하세요
+-- Run this SQL in the Supabase SQL Editor to set up the database
 
 -- ============================================
--- 1. 테이블 생성
+-- 1. Table creation
 -- ============================================
 
--- 상품 테이블
+-- Products table
 CREATE TABLE IF NOT EXISTS products (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS products (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 프로필 테이블 (사용자 정보)
+-- Profiles table (user info)
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
     email TEXT NOT NULL,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 장바구니 테이블
+-- Cart items table
 CREATE TABLE IF NOT EXISTS cart_items (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
     UNIQUE(user_id, product_id)
 );
 
--- 주문 테이블
+-- Orders table
 CREATE TABLE IF NOT EXISTS orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS orders (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 주문 상세 테이블
+-- Order items table
 CREATE TABLE IF NOT EXISTS order_items (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     order_id UUID REFERENCES orders ON DELETE CASCADE NOT NULL,
@@ -58,63 +58,63 @@ CREATE TABLE IF NOT EXISTS order_items (
 );
 
 -- ============================================
--- 2. Row Level Security (RLS) 설정
+-- 2. Row Level Security (RLS) setup
 -- ============================================
 
--- 상품 테이블 RLS
+-- Products table RLS
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "상품은 누구나 조회 가능" ON products
+CREATE POLICY "Anyone can read products" ON products
     FOR SELECT USING (true);
 
-CREATE POLICY "상품은 관리자만 수정 가능" ON products
+CREATE POLICY "Only admins can modify products" ON products
     FOR ALL USING (auth.uid() IN (
         SELECT id FROM profiles WHERE email LIKE '%admin%'
     ));
 
--- 프로필 테이블 RLS
+-- Profiles table RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "프로필은 본인만 조회 가능" ON profiles
+CREATE POLICY "Profiles readable by owner only" ON profiles
     FOR SELECT USING (auth.uid() = id);
 
-CREATE POLICY "프로필은 본인만 수정 가능" ON profiles
+CREATE POLICY "Profiles updatable by owner only" ON profiles
     FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "프로필은 본인만 삭제 가능" ON profiles
+CREATE POLICY "Profiles deletable by owner only" ON profiles
     FOR DELETE USING (auth.uid() = id);
 
-CREATE POLICY "프로필은 인증된 사용자만 생성 가능" ON profiles
+CREATE POLICY "Profiles creatable by authenticated user only" ON profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 
--- 장바구니 테이블 RLS
+-- Cart items table RLS
 ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "장바구니는 본인만 조회 가능" ON cart_items
+CREATE POLICY "Cart readable by owner only" ON cart_items
     FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "장바구니는 본인만 추가 가능" ON cart_items
+CREATE POLICY "Cart insertable by owner only" ON cart_items
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "장바구니는 본인만 수정 가능" ON cart_items
+CREATE POLICY "Cart updatable by owner only" ON cart_items
     FOR UPDATE USING (auth.uid() = user_id);
 
-CREATE POLICY "장바구니는 본인만 삭제 가능" ON cart_items
+CREATE POLICY "Cart deletable by owner only" ON cart_items
     FOR DELETE USING (auth.uid() = user_id);
 
--- 주문 테이블 RLS
+-- Orders table RLS
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "주문은 본인만 조회 가능" ON orders
+CREATE POLICY "Orders readable by owner only" ON orders
     FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "주문은 본인만 생성 가능" ON orders
+CREATE POLICY "Orders creatable by owner only" ON orders
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- 주문 상세 테이블 RLS
+-- Order items table RLS
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "주문 상세은 본인만 조회 가능" ON order_items
+CREATE POLICY "Order items readable by owner only" ON order_items
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM orders 
@@ -124,10 +124,10 @@ CREATE POLICY "주문 상세은 본인만 조회 가능" ON order_items
     );
 
 -- ============================================
--- 3. 트리거 및 함수
+-- 3. Triggers and functions
 -- ============================================
 
--- 새 사용자 가입 시 프로필 자동 생성
+-- Automatically create profile when a new user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -141,7 +141,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 트리거 생성
+-- Create trigger
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
@@ -149,26 +149,26 @@ CREATE TRIGGER on_auth_user_created
     EXECUTE FUNCTION public.handle_new_user();
 
 -- ============================================
--- 4. 테스트 데이터
+-- 4. Test data
 -- ============================================
 
--- 테스트 상품 데이터
+-- Sample product data
 INSERT INTO products (name, description, price, image_url, category, stock, rating) VALUES
-('프리미엄 무선 헤드폰', '고음질 블루투스 5.0 무선 헤드폰. 40시간 배터리 수명, 액티브 노이즈 캔슬링 기능', 299000, 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60', '전자기기', 50, 4.8),
-('스마트 워치 프로', '건강 모니터링, GPS, 수영 방수 기능을 갖춘 프리미엄 스마트 워치', 399000, 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60', '전자기기', 30, 4.6),
-('울트라북 15인치', '최신 프로세서, 16GB RAM, 512GB SSD를 탑재한 초경량 노트북', 1299000, 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&auto=format&fit=crop&q=60', '컴퓨터', 20, 4.9),
-('4K 모니터 27인치', 'IPS 패널, 99% sRGB, HDR 지원的专业级 디스플레이', 549000, 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&auto=format&fit=crop&q=60', '컴퓨터', 25, 4.7),
-('기계식 키보드 RGB', '청축 스위치, 커스텀 RGB 백라이트, 프로그래머블 키', 189000, 'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=500&auto=format&fit=crop&q=60', '컴퓨터', 40, 4.5),
-('게이밍 마우스', '16000 DPI, 초경량 설계, 프로그래머블 버튼 8개', 89000, 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&auto=format&fit=crop&q=60', '컴퓨터', 60, 4.4),
-('블루투스 스피커', '360도 서라운드 사운드, 24시간 재생, 방수 IPX7', 159000, 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&auto=format&fit=crop&q=60', '전자기기', 35, 4.6),
-('무선 충전 패드', '15W 고속 충전, 멀티 디바이스 지원, LED 상태 표시', 49000, 'https://images.unsplash.com/photo-1586816879360-004f5b0c51e3?w=500&auto=format&fit=crop&q=60', '액세서리', 100, 4.3),
-('노이즈 캔슬링 이어폰', '진정한 무선, ANC, 투명 모드, 30시간 배터리', 229000, 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&auto=format&fit=crop&q=60', '전자기기', 45, 4.7),
-('태블릿 10.5인치', '2K 디스플레이, 스타일러스 지원, 올데이 배터리', 499000, 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500&auto=format&fit=crop&q=60', '전자기기', 15, 4.5),
-('스마트 홈 허브', '음성 제어, IoT 기기 연결, AI 어시스턴트 내장', 129000, 'https://images.unsplash.com/photo-1558089687-f282ffcbc126?w=500&auto=format&fit=crop&q=60', '스마트홈', 40, 4.2),
-('보안 칩라 2K', '야간 투시, 양방향 오디오, 클라우드 저장, AI 감지', 99000, 'https://images.unsplash.com/photo-1557324232-b8917d3c3dcb?w=500&auto=format&fit=crop&q=60', '스마트홈', 55, 4.4);
+('Premium Wireless Headphones', 'High-fidelity Bluetooth 5.0 wireless headphones with 40-hour battery life and active noise cancelling.', 299000, 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60', 'Electronics', 50, 4.8),
+('Smart Watch Pro', 'Premium smartwatch with health monitoring, GPS, and swim-proof water resistance.', 399000, 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60', 'Electronics', 30, 4.6),
+('Ultrabook 15-inch', 'Ultra-light laptop with latest processor, 16GB RAM, and 512GB SSD.', 1299000, 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&auto=format&fit=crop&q=60', 'Computers', 20, 4.9),
+('4K Monitor 27-inch', 'IPS panel, 99% sRGB, HDR support, professional-grade display.', 549000, 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=500&auto=format&fit=crop&q=60', 'Computers', 25, 4.7),
+('Mechanical Keyboard RGB', 'Clicky switches, custom RGB backlight, programmable keys.', 189000, 'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?w=500&auto=format&fit=crop&q=60', 'Computers', 40, 4.5),
+('Gaming Mouse', '16000 DPI, ultra-light design, 8 programmable buttons.', 89000, 'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&auto=format&fit=crop&q=60', 'Computers', 60, 4.4),
+('Bluetooth Speaker', '360° surround sound, 24-hour playback, IPX7 waterproof.', 159000, 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&auto=format&fit=crop&q=60', 'Electronics', 35, 4.6),
+('Wireless Charging Pad', '15W fast charging, multi-device support, LED status indicator.', 49000, 'https://images.unsplash.com/photo-1586816879360-004f5b0c51e3?w=500&auto=format&fit=crop&q=60', 'Accessories', 100, 4.3),
+('Noise Cancelling Earbuds', 'True wireless earbuds with ANC, transparency mode, and 30-hour battery.', 229000, 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&auto=format&fit=crop&q=60', 'Electronics', 45, 4.7),
+('Tablet 10.5-inch', '2K display, stylus support, all-day battery life.', 499000, 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=500&auto=format&fit=crop&q=60', 'Electronics', 15, 4.5),
+('Smart Home Hub', 'Voice control, IoT device connectivity, built-in AI assistant.', 129000, 'https://images.unsplash.com/photo-1558089687-f282ffcbc126?w=500&auto=format&fit=crop&q=60', 'Smart Home', 40, 4.2),
+('Security Camera 2K', 'Night vision, two-way audio, cloud storage, AI detection.', 99000, 'https://images.unsplash.com/photo-1557324232-b8917d3c3dcb?w=500&auto=format&fit=crop&q=60', 'Smart Home', 55, 4.4);
 
 -- ============================================
--- 5. 인덱스 생성 (성능 최적화)
+-- 5. Indexes (performance optimization)
 -- ============================================
 
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
